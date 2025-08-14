@@ -37,4 +37,62 @@ struct HelloPayload {
   uint8_t     wifiChannel;   // for ESP-NOW alignment
   uint8_t     mac[6];
 };
+
+// --- Common UID type ---
+struct TrexUid {
+  uint8_t len;          // 4,7,10
+  uint8_t bytes[10];    // zero-padded
+};
+
+// --- Server broadcasts ---
+struct ScoreUpdatePayload {
+  uint32_t teamScore;
+};
+struct StationUpdatePayload {
+  uint8_t  stationId;
+  uint16_t inventory;
+  uint16_t capacity;
+};
+struct GameOverPayload {
+  uint8_t reason;       // GameOverReason
+};
+
+// --- Loot hold flow ---
+struct LootHoldStartPayload {
+  uint32_t holdId;      // random per attempt (from loot station)
+  TrexUid  uid;
+  uint8_t  stationId;   // loot station id (1..5)
+};
+struct LootHoldAckPayload {
+  uint32_t holdId;
+  uint8_t  accepted;    // 1=yes, 0=no
+  uint8_t  rateHz;      // usually 1
+  uint8_t  maxCarry;
+  uint8_t  carried;     // current carried for player
+  uint16_t inventory;   // station inventory after ack
+  uint16_t capacity;    // station capacity
+  uint8_t  denyReason;  // HoldEndReason if accepted=0
+};
+struct LootTickPayload {
+  uint32_t holdId;
+  uint8_t  carried;     // after this tick
+  uint16_t inventory;   // after this tick
+};
+struct LootHoldStopPayload {
+  uint32_t holdId;
+};
+struct HoldEndPayload {
+  uint32_t holdId;
+  uint8_t  reason;      // HoldEndReason
+};
+
+// --- Drop flow ---
+struct DropRequestPayload {
+  TrexUid  uid;
+  uint8_t  readerIndex; // 0..3 on the drop station
+};
+struct DropResultPayload {
+  uint16_t dropped;     // moved from carried -> banked
+  uint32_t teamScore;   // updated team
+};
 #pragma pack(pop)
