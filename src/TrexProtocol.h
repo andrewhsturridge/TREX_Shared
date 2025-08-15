@@ -1,7 +1,7 @@
 #pragma once
 #include <stdint.h>
 
-#define TREX_PROTO_VERSION 1
+#define TREX_PROTO_VERSION 2
 
 // --- enums ---
 enum class StationType : uint8_t { TREX=0, LOOT=1, DROP=2 };
@@ -9,11 +9,14 @@ enum class LightState  : uint8_t { GREEN=0, RED=1 };
 
 enum class MsgType : uint8_t {
   HELLO=1, HEARTBEAT=2,
-  STATE_TICK=10, GAME_OVER=11, SCORE_UPDATE=12, STATION_UPDATE=13,
+  STATE_TICK=10, GAME_OVER=11, SCORE_UPDATE=12, STATION_UPDATE=13, GAME_START=14,
   LOOT_HOLD_START=20, LOOT_HOLD_ACK=21, LOOT_TICK=22, LOOT_HOLD_STOP=23, HOLD_END=24,
   DROP_REQUEST=30, DROP_RESULT=31,
   CONFIG_UPDATE=40
 };
+
+static_assert((uint8_t)MsgType::GAME_START == 14, "GAME_START value mismatch!");
+#warning "TrexProtocol.h included here"
 
 #pragma pack(push,1)
 struct MsgHeader {
