@@ -6,9 +6,61 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <WiFiUdp.h>
+#include <esp_wifi.h>
 #include <ESPmDNS.h>
 #include <ArduinoOTA.h>
 #include <TrexProtocol.h>   // for StationType
+
+#ifndef MAINT_ENABLE_HTTP_FS
+#define MAINT_ENABLE_HTTP_FS 1
+#endif
+
+#if MAINT_ENABLE_HTTP_FS
+  #include <WebServer.h>
+  #include <LittleFS.h>
+  static WebServer *maintHttp = nullptr;
+  static const char* kUploadPath = "/LootDrop.wav"; // change if you want a different filename
+
+  inline void startHttpFs() {
+    MDNS.addService("http","tcp",80);
+    LittleFS.begin();
+    maintHttp = new WebServer(80);
+
+    maintHttp->on("/", HTTP_GET, [](){
+      maintHttp->send(200,"text/html",
+        "<h3>TREX FS Uploader</h3>"
+        "<form method='POST' action='/upload' enctype='multipart/form-data'>"
+        "<input type='file' name='f'><input type='submit' value='Upload'></form>"
+        "<p>Target: " + String(kUploadPath) + "</p>");
+    });
+
+	maintHttp->on("/upload", HTTP_POST,
+	  [](){ maintHttp->send(200,"text/plain","OK. Reboot or re-open file to use new clip."); },
+	  [](){
+	    HTTPUpload &up = maintHttp->upload();
+	    static File f;
+	    switch (up.status) {
+	      case UPLOAD_FILE_START:
+	        if (LittleFS.exists(kUploadPath)) LittleFS.remove(kUploadPath);
+	        f = LittleFS.open(kUploadPath, "w");
+	        break;
+	      case UPLOAD_FILE_WRITE:
+	        if (f) f.write(up.buf, up.currentSize);
+	        break;
+	      case UPLOAD_FILE_END:
+	        if (f) f.close();
+	        break;
+	      default:
+	        break;
+	    }
+	  });
+
+    maintHttp->begin();
+    Serial.println("[Maint] HTTP FS uploader on / (port 80)");
+  }
+
+  inline void loopHttpFs() { if (maintHttp) maintHttp->handleClient(); }
+#endif
 
 namespace Maint {
 
@@ -98,6 +150,8 @@ inline void begin(const Config& cfg) {
   if (cfg_.ssid && cfg_.ssid[0]) {
     WiFi.mode(WIFI_STA);
     WiFi.setHostname(cfg_.host);
+    WiFi.setSleep(false);
+    esp_wifi_set_ps(WIFI_PS_NONE);
     WiFi.begin(cfg_.ssid, cfg_.pass);
     uint32_t t0 = millis();
     while (WiFi.status() != WL_CONNECTED && (millis() - t0) < 8000) delay(50);
@@ -107,6 +161,8 @@ inline void begin(const Config& cfg) {
   if (!staOK && cfg_.apFallback) {
     String ssid = String(cfg_.host) + "-" + String((uint32_t)(ESP.getEfuseMac() & 0xFFFF), HEX);
     WiFi.mode(WIFI_AP);
+    WiFi.setSleep(false);
+    esp_wifi_set_ps(WIFI_PS_NONE);
     WiFi.softAP(ssid.c_str(), cfg_.apPass, cfg_.apChannel, 0, 1);
     Serial.printf("[Maint] SoftAP: %s  pass:%s  ip:%s\n",
                   WiFi.softAPSSID().c_str(), cfg_.apPass, WiFi.softAPIP().toString().c_str());
@@ -134,6 +190,10 @@ inline void begin(const Config& cfg) {
     beacon.begin(cfg_.beaconPort);
     sendBeaconOnce(); // fire one immediately
   }
+  
+  #if MAINT_ENABLE_HTTP_FS
+  	startHttpFs();
+  #endif
 
   Serial.printf("[Maint] Telnet: %s.local:23\n", cfg_.host);
 }
@@ -166,12 +226,38 @@ inline void loop() {
     if (client && client.connected()) { telnet.available().stop(); }
     client = telnet.available();
     client.setNoDelay(true);
-    client.print("\r\n[TREX] telnet ready. cmds: help, ip, rssi, free, whoami, reboot\r\n");
+	client.print(
+	  "\r\n[TREX] maintenance console\r\n"
+	  "Type 'help' for commands. HTTP FS upload served on port 80.\r\n"
+	);
   }
   // Telnet commands
   if (client && client.connected() && client.available()) {
     String cmd = client.readStringUntil('\n'); cmd.trim(); cmd.toLowerCase();
-    if (cmd=="help")        client.print("help, ip, rssi, free, whoami, reboot\r\n");
+	if (cmd == "help") {
+	  IPAddress ip = (WiFi.getMode()==WIFI_MODE_AP) ? WiFi.softAPIP() : WiFi.localIP();
+	  client.print(
+	    "Commands:\r\n"
+	    "  help            Show this help\r\n"
+	    "  ip              Show IP address\r\n"
+	    "  rssi            Show Wi-Fi RSSI (dBm)\r\n"
+	    "  free            Show free heap (bytes)\r\n"
+	    "  whoami          Show host / id / type\r\n"
+	    "  reboot          Reboot device\r\n"
+	#if MAINT_ENABLE_HTTP_FS
+	    "  df              LittleFS usage\r\n"
+	    "  ls              List files in /\r\n"
+	    "  stat            Show uploaded clip size\r\n"
+	    "  rm /path        Delete file at /path\r\n"
+	    "  format          FORMAT LittleFS (ERASES ALL)\r\n"
+	#endif
+	  );
+	#if MAINT_ENABLE_HTTP_FS
+	  client.printf("HTTP upload: http://%s.local/ (or http://%u.%u.%u.%u/)\r\n",
+	                cfg_.host, ip[0], ip[1], ip[2], ip[3]);
+	  client.printf("Target file: %s\r\n", kUploadPath);
+	#endif
+	}
     else if (cmd=="ip")     client.printf("IP: %s\r\n",
                               (WiFi.getMode()==WIFI_MODE_AP)?WiFi.softAPIP().toString().c_str()
                                                             :WiFi.localIP().toString().c_str());
@@ -179,6 +265,56 @@ inline void loop() {
     else if (cmd=="free")   client.printf("Heap: %u\r\n", (unsigned)ESP.getFreeHeap());
     else if (cmd=="whoami") client.printf("%s id=%u type=%s\r\n", cfg_.host, cfg_.stationId, typeStr(cfg_.stationType));
     else if (cmd=="reboot"){ client.print("Rebooting...\r\n"); delay(200); ESP.restart(); }
+	else if (cmd=="stat") {
+	  #if MAINT_ENABLE_HTTP_FS
+	    File f = LittleFS.open(kUploadPath, "r");
+	    if (!f) client.print("missing\r\n");
+	    else { client.printf("%s size=%u\r\n", kUploadPath, (unsigned)f.size()); f.close(); }
+	  #else
+	    client.print("fs disabled\r\n");
+	  #endif
+	}
+	else if (cmd=="df") {
+	  size_t total = LittleFS.totalBytes(), used = LittleFS.usedBytes();
+	  client.printf("LittleFS: used=%u / total=%u (free=%u)\r\n",
+	                (unsigned)used, (unsigned)total, (unsigned)(total-used));
+	}
+	else if (cmd == "ls") {
+	  #if MAINT_ENABLE_HTTP_FS
+	    File root = LittleFS.open("/");
+	    if (!root) { client.print("LittleFS not mounted\r\n"); }
+	    else {
+	      File f = root.openNextFile();
+	      while (f) {
+	        client.printf("%s\t%u\r\n", f.name(), (unsigned)f.size());
+	        f = root.openNextFile();
+	      }
+	    }
+	  #else
+	    client.print("fs disabled\r\n");
+	  #endif
+	}
+	else if (cmd.startsWith("rm ")) {
+	  #if MAINT_ENABLE_HTTP_FS
+	    String p = cmd.substring(3); p.trim();
+	    if (p.length()==0 || p[0] != '/') client.print("usage: rm /filename\r\n");
+	    else if (LittleFS.remove(p)) client.print("ok\r\n");
+	    else client.print("fail\r\n");
+	  #else
+	    client.print("fs disabled\r\n");
+	  #endif
+	}
+	else if (cmd == "format") {
+	  #if MAINT_ENABLE_HTTP_FS
+	    client.print("Formatting...\r\n");
+	    LittleFS.format();
+	    client.print("Done. Rebooting.\r\n");
+	    delay(300);
+	    ESP.restart();
+	  #else
+	    client.print("fs disabled\r\n");
+	  #endif
+	}
     else                    client.print("?\r\n");
   }
 
@@ -188,6 +324,10 @@ inline void loop() {
     lastBeacon = now;
     sendBeaconOnce();
   }
+  #if MAINT_ENABLE_HTTP_FS
+	loopHttpFs();
+  #endif
+
 }
 
 } // namespace Maint
