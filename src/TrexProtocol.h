@@ -5,7 +5,7 @@
 
 // --- enums ---
 enum class StationType : uint8_t { TREX=0, LOOT=1, DROP=2 };
-enum class LightState  : uint8_t { GREEN=0, RED=1 };
+enum class LightState  : uint8_t { GREEN=0, RED=1, YELLOW=2 };
 
 enum class MsgType : uint8_t {
   HELLO=1, HEARTBEAT=2,
