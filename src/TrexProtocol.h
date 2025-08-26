@@ -9,7 +9,7 @@ enum class LightState  : uint8_t { GREEN=0, RED=1, YELLOW=2 };
 
 enum class MsgType : uint8_t {
   HELLO=1, HEARTBEAT=2,
-  STATE_TICK=10, GAME_OVER=11, SCORE_UPDATE=12, STATION_UPDATE=13, GAME_START=14,
+  STATE_TICK=10, GAME_OVER=11, SCORE_UPDATE=12, STATION_UPDATE=13, GAME_START=14, ROUND_STATUS=15,
   LOOT_HOLD_START=20, LOOT_HOLD_ACK=21, LOOT_TICK=22, LOOT_HOLD_STOP=23, HOLD_END=24,
   DROP_REQUEST=30, DROP_RESULT=31,
   CONFIG_UPDATE=40,
@@ -98,6 +98,15 @@ struct OtaStatusPayload {
   uint8_t   fwMinor;
   uint32_t  bytes;           // bytes downloaded so far (SUCCESS sends total)
   uint32_t  total;           // total if known else 0
+};
+
+struct RoundStatusPayload {
+  uint8_t  roundIndex;
+  uint8_t  reserved;      // keep alignment tidy
+  uint16_t _pad;
+  uint32_t roundStartScore;  // teamScore at round start
+  uint32_t roundGoalAbs;     // absolute teamScore to reach this round
+  uint32_t msLeftRound;      // optional, informational
 };
 
 #pragma pack(pop)
