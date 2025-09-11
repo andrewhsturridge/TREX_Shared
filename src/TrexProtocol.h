@@ -48,7 +48,15 @@ struct ScoreUpdatePayload { uint32_t teamScore; };
 
 struct StationUpdatePayload { uint8_t stationId; uint16_t inventory; uint16_t capacity; };
 
-struct GameOverPayload { uint8_t reason; /* GameOverReason */ };
+// Special value meaning "apply to all stations"
+#define GAMEOVER_BLAME_ALL 0xFF
+
+// If payloadLen == 1 => legacy (no blameSid) -> treat as GAMEOVER_BLAME_ALL.
+// If payloadLen >= 2 => second byte is blameSid.
+struct GameOverPayload {
+  uint8_t reason;    /* GameOverReason */
+  uint8_t blameSid;  /* station id that caused end; 0xFF = ALL (optional; see payloadLen) */
+};
 
 // -------- loot flow ----------
 struct LootHoldStartPayload { uint32_t holdId; TrexUid uid; uint8_t stationId; };
