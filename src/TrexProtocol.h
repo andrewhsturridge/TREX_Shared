@@ -13,7 +13,8 @@ enum class MsgType : uint8_t {
   LOOT_HOLD_START=20, LOOT_HOLD_ACK=21, LOOT_TICK=22, LOOT_HOLD_STOP=23, HOLD_END=24,
   DROP_REQUEST=30, DROP_RESULT=31,
   CONFIG_UPDATE=40,
-  OTA_STATUS=50          // NEW: Loot → T-Rex OTA status
+  OTA_STATUS=50,
+  BONUS_UPDATE=60
 };
 
 static_assert((uint8_t)MsgType::GAME_START == 14, "GAME_START value mismatch!");
@@ -82,6 +83,8 @@ struct HoldEndPayload { uint32_t holdId; uint8_t reason; /* HoldEndReason */ };
 struct DropRequestPayload { TrexUid uid; uint8_t readerIndex; /*0..3*/ };
 
 struct DropResultPayload { uint16_t dropped; uint32_t teamScore; };
+
+struct BonusUpdatePayload { uint32_t mask; };
 
 // -------- OTA trigger & status ----------
 struct ConfigUpdatePayload {
