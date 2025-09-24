@@ -12,6 +12,7 @@ enum class LightState  : uint8_t { GREEN=0, RED=1, YELLOW=2 };
 enum class MsgType : uint8_t {
   HELLO=1, HEARTBEAT=2,
   STATE_TICK=10, GAME_OVER=11, SCORE_UPDATE=12, STATION_UPDATE=13, GAME_START=14, ROUND_STATUS=15,
+  ROUND45_START = 16, ROUND45_RESULT = 17,
   LOOT_HOLD_START=20, LOOT_HOLD_ACK=21, LOOT_TICK=22, LOOT_HOLD_STOP=23, HOLD_END=24,
   DROP_REQUEST=30, DROP_RESULT=31,
   CONFIG_UPDATE=40,
@@ -120,6 +121,22 @@ struct RoundStatusPayload {
   uint32_t roundStartScore;  // teamScore at round start
   uint32_t roundGoalAbs;     // absolute teamScore to reach this round
   uint32_t msLeftRound;      // optional, informational
+};
+
+struct Round45StartPayload {
+  uint16_t msTotal;     // total window (e.g., 60000)
+  uint8_t  segMin;      // min segment length (pixels)
+  uint8_t  segMax;      // max segment length (pixels)
+  uint16_t stepMsMin;   // green step min (ms per pixel move)
+  uint16_t stepMsMax;   // green step max
+};
+
+struct Round45ResultPayload {
+  uint8_t  stationId;   // 1..MAX_STATIONS
+  uint8_t  success;     // 1 = success, 0 = miss
+  uint8_t  greenPos;    // where green was when decided (0..GAUGE_LEN-1)
+  uint8_t  segStart;    // client’s random segment start
+  uint8_t  segLen;      // client’s random segment length
 };
 
 #pragma pack(pop)
