@@ -3,6 +3,8 @@
 
 #define TREX_PROTO_VERSION 2
 
+#define DROP_READER_UNKNOWN 255
+
 // --- enums ---
 enum class StationType : uint8_t { TREX=0, LOOT=1, DROP=2 };
 enum class LightState  : uint8_t { GREEN=0, RED=1, YELLOW=2 };
@@ -82,7 +84,7 @@ struct HoldEndPayload { uint32_t holdId; uint8_t reason; /* HoldEndReason */ };
 // -------- drop flow ----------
 struct DropRequestPayload { TrexUid uid; uint8_t readerIndex; /*0..3*/ };
 
-struct DropResultPayload { uint16_t dropped; uint32_t teamScore; };
+struct DropResultPayload { uint16_t dropped; uint32_t teamScore; uint8_t readerIndex; };
 
 struct BonusUpdatePayload { uint32_t mask; };
 
