@@ -20,6 +20,9 @@ enum class MsgType : uint8_t {
   BONUS_UPDATE=60
 };
 
+// BONUS_UPDATE flag bits (in MsgHeader.flags)
+#define BONUS_F_R45 0x01  // when set, BONUS_UPDATE mask controls the R4.5 mini-game
+
 static_assert((uint8_t)MsgType::GAME_START == 14, "GAME_START value mismatch!");
 #warning "TrexProtocol.h included here"
 
