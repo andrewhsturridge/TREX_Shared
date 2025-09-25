@@ -139,4 +139,9 @@ struct Round45ResultPayload {
   uint8_t  segLen;      // client’s random segment length
 };
 
+static_assert(sizeof(Round45StartPayload)  == 8, "Round45StartPayload must be 8 bytes");
+static_assert(sizeof(Round45ResultPayload) == 5, "Round45ResultPayload must be 5 bytes");
+static_assert((int)MsgType::ROUND45_START  == 16, "ROUND45_START value mismatch");
+static_assert((int)MsgType::ROUND45_RESULT == 17, "ROUND45_RESULT value mismatch");
+
 #pragma pack(pop)
