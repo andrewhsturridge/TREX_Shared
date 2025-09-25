@@ -12,19 +12,12 @@ enum class LightState  : uint8_t { GREEN=0, RED=1, YELLOW=2 };
 enum class MsgType : uint8_t {
   HELLO=1, HEARTBEAT=2,
   STATE_TICK=10, GAME_OVER=11, SCORE_UPDATE=12, STATION_UPDATE=13, GAME_START=14, ROUND_STATUS=15,
-  ROUND45_START = 16, ROUND45_RESULT = 17,
   LOOT_HOLD_START=20, LOOT_HOLD_ACK=21, LOOT_TICK=22, LOOT_HOLD_STOP=23, HOLD_END=24,
   DROP_REQUEST=30, DROP_RESULT=31,
   CONFIG_UPDATE=40,
   OTA_STATUS=50,
   BONUS_UPDATE=60
 };
-
-// BONUS_UPDATE flag bits (in MsgHeader.flags)
-#define BONUS_F_R45 0x01  // when set, BONUS_UPDATE mask controls the R4.5 mini-game
-
-static_assert((uint8_t)MsgType::GAME_START == 14, "GAME_START value mismatch!");
-#warning "TrexProtocol.h included here"
 
 #pragma pack(push,1)
 
@@ -125,26 +118,5 @@ struct RoundStatusPayload {
   uint32_t roundGoalAbs;     // absolute teamScore to reach this round
   uint32_t msLeftRound;      // optional, informational
 };
-
-struct Round45StartPayload {
-  uint16_t msTotal;     // total window (e.g., 60000)
-  uint8_t  segMin;      // min segment length (pixels)
-  uint8_t  segMax;      // max segment length (pixels)
-  uint16_t stepMsMin;   // green step min (ms per pixel move)
-  uint16_t stepMsMax;   // green step max
-};
-
-struct Round45ResultPayload {
-  uint8_t  stationId;   // 1..MAX_STATIONS
-  uint8_t  success;     // 1 = success, 0 = miss
-  uint8_t  greenPos;    // where green was when decided (0..GAUGE_LEN-1)
-  uint8_t  segStart;    // client’s random segment start
-  uint8_t  segLen;      // client’s random segment length
-};
-
-static_assert(sizeof(Round45StartPayload)  == 8, "Round45StartPayload must be 8 bytes");
-static_assert(sizeof(Round45ResultPayload) == 5, "Round45ResultPayload must be 5 bytes");
-static_assert((int)MsgType::ROUND45_START  == 16, "ROUND45_START value mismatch");
-static_assert((int)MsgType::ROUND45_RESULT == 17, "ROUND45_RESULT value mismatch");
 
 #pragma pack(pop)
