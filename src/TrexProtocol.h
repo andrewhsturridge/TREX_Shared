@@ -12,6 +12,7 @@ enum class LightState  : uint8_t { GREEN=0, RED=1, YELLOW=2 };
 enum class MsgType : uint8_t {
   HELLO=1, HEARTBEAT=2,
   STATE_TICK=10, GAME_OVER=11, SCORE_UPDATE=12, STATION_UPDATE=13, GAME_START=14, ROUND_STATUS=15,
+  MG_START=16, MG_STOP=17, MG_RESULT=18,
   LOOT_HOLD_START=20, LOOT_HOLD_ACK=21, LOOT_TICK=22, LOOT_HOLD_STOP=23, HOLD_END=24,
   DROP_REQUEST=30, DROP_RESULT=31,
   CONFIG_UPDATE=40,
@@ -118,5 +119,18 @@ struct RoundStatusPayload {
   uint32_t roundGoalAbs;     // absolute teamScore to reach this round
   uint32_t msLeftRound;      // optional, informational
 };
+
+struct MgStartPayload {
+  uint32_t seed;
+  uint16_t timerMs;
+  uint8_t  speedMinMs, speedMaxMs;
+  uint8_t  segMin, segMax;
+} __attribute__((packed));
+
+struct MgResultPayload {
+  TrexUid  uid;
+  uint8_t  stationId;
+  uint8_t  success;  // 1=hit, 0=miss
+} __attribute__((packed));
 
 #pragma pack(pop)
