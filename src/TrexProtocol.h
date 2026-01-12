@@ -1,6 +1,13 @@
 #pragma once
 #include <stdint.h>
 
+// --- TRex wire framing (multi-game safety) ---
+// When enabled in TransportConfig, packets are sent as:
+//   [magic0][magic1][wireVersion][MsgHeader...]
+#define TREX_WIRE_MAGIC0   'T'
+#define TREX_WIRE_MAGIC1   'X'
+#define TREX_WIRE_VERSION  1
+
 #define TREX_PROTO_VERSION 2
 
 #define DROP_READER_UNKNOWN 255
@@ -19,7 +26,9 @@ enum class MsgType : uint8_t {
   OTA_STATUS=50,
   BONUS_UPDATE=60,
   CONTROL_CMD=70,
-  GAME_STATUS=71
+  GAME_STATUS=71,
+  LIVES_UPDATE=72,
+  RADIO_CFG=80
 };
 
 #pragma pack(push,1)
@@ -146,6 +155,23 @@ struct GameStatusPayload {
   uint8_t  phase;      // Phase
   uint8_t  lightState; // LightState
   uint8_t  _pad;
+} __attribute__((packed));
+
+struct LivesUpdatePayload {
+  uint8_t livesRemaining;
+  uint8_t livesMax;
+  uint8_t reason;    // last failure reason that consumed a life (0 = reset/none)
+  uint8_t blameSid;  // station id (0xFF = ALL)
+} __attribute__((packed));
+
+// -------- radio config / facility management --------
+// Server broadcasts RADIO_CFG to move the whole TRex game onto a new channel,
+// and/or enable/disable wire framing.
+struct RadioCfgPayload {
+  uint8_t wifiChannel;   // 1..13
+  uint8_t txFramed;      // 0 = legacy (no wire header), 1 = framed (magic header)
+  uint8_t rxLegacy;      // 0 = drop legacy packets, 1 = accept legacy packets
+  uint8_t _pad;
 } __attribute__((packed));
 
 // -------- minigame --------
