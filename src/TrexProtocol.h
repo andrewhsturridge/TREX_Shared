@@ -28,6 +28,7 @@ enum class MsgType : uint8_t {
   CONTROL_CMD=70,
   GAME_STATUS=71,
   LIVES_UPDATE=72,
+  SERVER_CMD=73,
   RADIO_CFG=80
 };
 
@@ -145,6 +146,23 @@ struct ControlCmdPayload {
   uint8_t targetType; // 0=ALL types, else StationType::*
   uint8_t targetId;   // 0=ALL ids, else specific stationId
   uint8_t _pad;
+} __attribute__((packed));
+
+enum class ServerCmdOp : uint8_t {
+  START_TEST_ROUND    = 1,
+  SET_PIR_ARM_MS      = 2,
+  SET_RED_LOOT_MODE   = 3
+};
+
+enum class RedLootMode : uint8_t {
+  DROP_ONLY            = 0,
+  PENALIZE_AFTER_GRACE = 1
+};
+
+struct ServerCmdPayload {
+  uint8_t  op;       // ServerCmdOp
+  uint8_t  arg8;     // round index or RedLootMode
+  uint16_t value16;  // milliseconds or reserved
 } __attribute__((packed));
 
 struct GameStatusPayload {
