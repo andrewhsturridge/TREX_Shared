@@ -70,6 +70,13 @@ struct GameOverPayload {
   uint8_t blameSid;  /* station id that caused end; 0xFF = ALL (optional; see payloadLen) */
 };
 
+enum GameOverReason : uint8_t {
+  GAMEOVER_REASON_SUCCESS       = 0,
+  GAMEOVER_REASON_MANUAL        = 2,
+  GAMEOVER_REASON_RED_VIOLATION = 3,
+  GAMEOVER_REASON_GOAL_NOT_MET  = 4,
+};
+
 // -------- loot flow ----------
 struct LootHoldStartPayload { uint32_t holdId; TrexUid uid; uint8_t stationId; };
 
